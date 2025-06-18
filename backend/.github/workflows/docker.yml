@@ -3,7 +3,7 @@ name: Build and Push Java Backend Docker Image to GHCR (Public)
 on:
   push:
     branches:
-      - main
+      - prod
     paths:
       - 'Dockerfile'
       - 'src/**'
