@@ -3,43 +3,38 @@ package com.popeye.backend.services;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ResourceUtils;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.InputStream;
 
 @Service
-public class FirebaseInitialize {    FileInputStream serviceAccount;
-    File file;
-    {
-        try {
-            file = ResourceUtils.getFile("classpath:firebase-configuration-key-popeye.json");
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-    }
+public class FirebaseInitialize {
 
-    //FileInputStream self learning
-    {
-        try {
-            serviceAccount = new FileInputStream(file);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    FirebaseOptions options;
-    //FirebaseOptions.Builder "depricated" but it still used to connect to website
-    {
-        try {
-            options = new FirebaseOptions.Builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
-            FirebaseApp.initializeApp(options);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    @PostConstruct
+    public void initFirebase() {
+        // Only initialize Firebase if it hasn't already been initialized
+        if (FirebaseApp.getApps().isEmpty()) {
+            try (InputStream serviceAccount = getClass().getClassLoader()
+                    .getResourceAsStream("firebase-configuration-key-popeye.json")) {
+
+                if (serviceAccount == null) {
+                    throw new IllegalStateException("firebase-configuration-key-popeye.json not found in classpath");
+                }
+
+                FirebaseOptions options = FirebaseOptions.builder()
+                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                        .build();
+
+                FirebaseApp.initializeApp(options);
+                System.out.println("Firebase initialized successfully.");
+
+            } catch (Exception e) {
+                System.err.println("Error initializing Firebase: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        } else {
+            System.out.println("ℹ️ Firebase already initialized — skipping re-initialization.");
         }
     }
 }

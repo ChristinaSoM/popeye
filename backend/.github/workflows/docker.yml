@@ -1,0 +1,54 @@
+name: Build and Push Java Backend Docker Image to GHCR (Public)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile'
+      - 'src/**'
+      - 'pom.xml'
+      - '.github/workflows/backend.yml'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR (no auth needed for public repo)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/christinasom/my-java-backend:latest
+
+      - name: Pull image from GHCR
+        run: docker pull ghcr.io/christinasom/my-java-backend:latest
+
+      - name: Run container
+        run: docker run -d -p 8080:8080 ghcr.io/christinasom/my-java-backend:latest
+
+      - name: Wait for app to start
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '30s'
+
+      - name: Check HTTP response
+        run: |
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" http://0.0.0.0:8080/)
+          if [ "$CODE" -eq 200 ]; then
+            echo "App is reachable with HTTP 200."
+          else
+            echo "Expected HTTP 200 but got $CODE"
+            exit 1
+          fi
